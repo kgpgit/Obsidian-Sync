@@ -1,9 +1,23 @@
 #!/bin/bash
-echo "Script Version 0.4.1.4"
-echo "This script is used to facilitate configuration of git for obsidian. "
+echo "Script Version 0.4.1.5"
+echo "This script is used to facilitate configuration of git for obsidian using termux. "
 
-HOME_PATH="/data/data/com.termux/files/home"
-DOWNLOAD_FOLDER="$HOME_PATH/storage/shared/Repos/Obsidian"
+SCRIPTS_TERMUX_DIR=".shortcuts"
+SCRIPTS_DIR="obsidian-sync"
+OBSIDIAN_DIR="Obsidian"
+GIT_DIR="Github"
+
+
+export HOME_PATH="/data/data/com.termux/files/home"
+export STORAGE_PATH="/storage/emulated/0"
+export REPOS_PATH="$STORAGE_PATH/Repos"
+export SCRIPTS_REPO_PATH="$REPOS_PATH/$GIT_DIR/$SCRIPTS_DIR"
+export SCRIPTS_REPO_PATH_TERMUX="$HOME_PATH/$SCRIPTS_TERMUX_DIR"
+export OBSIDIAN_PATH="$REPOS_PATH/$OBSIDIAN_DIR"
+#export DOWNLOAD_FOLDER="$REPOS_PATH/$OBSIDIAN_DIR"
+export GIT_PATH="$REPOS_PATH/$GIT_DIR"
+#export NOTIFICATION_PATH="$STORAGE_PATH/sync-error-notification"
+#export LAST_MOBILE_SYNC_PATH="$HOME/last_sync.log"
 
 
 # Define functions for each menu option
@@ -56,22 +70,22 @@ function generate_ssh_key() {
 function clone_repo() {
     folder="$1"
     git_url="$2"
-    echo "Git Folder: $HOME_PATH/$folder"
-    echo "Obsidian Folder: $DOWNLOAD_FOLDER/$folder"
+    echo "Git Folder: $GIT_PATH/$folder"
+    echo "Obsidian Folder: $OBSIDIAN_PATH/$folder"
     echo "Git Url: $git_url"
 
-    cd "$HOME_PATH/" || { echo "Failure while changing directory into $HOME_PATH"; exit 1; }
-    mkdir -p "$HOME_PATH/$folder"
+    cd "$OBSIDIAN_PATH/" || { echo "Failure while changing directory into $OBSIDIAN_PATH"; exit 1; }
+    mkdir -p "$OBSIDIAN_PATH/$folder"
 
-    git --git-dir "$HOME_PATH/$folder" --work-tree "$DOWNLOAD_FOLDER/$folder" clone "$git_url"
-    cd "$HOME_PATH/$folder" || { echo "Failure while changing directory into $HOME_PATH/$folder"; exit 1; }
-    git worktree add --checkout "$DOWNLOAD_FOLDER/$folder" --force
+    git --git-dir "$OBSIDIAN_PATH/$folder" --work-tree "$OBSIDIAN_PATH/$folder" clone "$git_url"
+    cd "$OBSIDIAN_PATH/$folder" || { echo "Failure while changing directory into $OBSIDIAN_PATH/$folder"; exit 1; }
+    git worktree add --checkout "$OBSIDIAN_PATH/$folder" --force
 }
 
 # add gitignore file
 function add_gitignore_entries() {
     folder_name="$1"
-    cd "$DOWNLOAD_FOLDER/$folder_name" || { echo "Failure while changing directory into $DOWNLOAD_FOLDER/$folder_name"; exit 1; }
+    cd "$OBSIDIAN_PATH/$folder_name" || { echo "Failure while changing directory into $OBSIDIAN_PATH/$folder_name"; exit 1; }
     GITIGNORE=".gitignore"
 
     ENTRIES=".trash/

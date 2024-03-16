@@ -12,7 +12,7 @@ You should have created a git repository containing only your notes in obsidian.
 Use this script via
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/pourmand1376/obsidian-sync/main/obsidian.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/kgpgit/obsidian-sync/carlos/obsidian.sh)"
 ```
 
 Then follow the steps in the script to sync the Obsidian git repo you have created.
