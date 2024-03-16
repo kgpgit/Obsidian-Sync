@@ -12,7 +12,7 @@ export HOME_PATH="/data/data/com.termux/files/home"
 export STORAGE_PATH="/storage/emulated/0"
 export REPOS_PATH="$STORAGE_PATH/Repos"
 export SCRIPTS_REPO_PATH="$REPOS_PATH/$GIT_DIR/$SCRIPTS_DIR"
-export SCRIPTS_REPO_PATH_TERMUX="$HOME_PATH/$SCRIPTS_TERMUX_DIR"
+export SCRIPTS_TERMUX_PATH="$HOME_PATH/$SCRIPTS_TERMUX_DIR/$SCRIPTS_DIR"
 export OBSIDIAN_PATH="$REPOS_PATH/$OBSIDIAN_DIR"
 #export DOWNLOAD_FOLDER="$REPOS_PATH/$OBSIDIAN_DIR"
 export GIT_PATH="$REPOS_PATH/$GIT_DIR"
@@ -107,7 +107,7 @@ function add_gitignore_entries() {
 
 function add_gitattributes_entry() {
     folder_name="$1"
-    cd "$DOWNLOAD_FOLDER/$folder_name" || { echo "Failure while changing directory into $DOWNLOAD_FOLDER/$folder_name"; exit 1; }
+    cd "$OBSIDIAN_PATH/$folder_name" || { echo "Failure while changing directory into $OBSIDIAN_PATH/$folder_name"; exit 1; }
     GITATTRIBUTES=".gitattributes"
     ENTRY="*.md merge=union"
 
@@ -124,7 +124,7 @@ function add_gitattributes_entry() {
 function remove_files_from_git()
 {
     folder_name="$1"
-    cd "$DOWNLOAD_FOLDER/$folder_name" || { echo "Failure while changing directory into $DOWNLOAD_FOLDER/$folder_name"; exit 1; }
+    cd "$OBSIDIAN_PATH/$folder_name" || { echo "Failure while changing directory into $OBSIDIAN_PATH/$folder_name"; exit 1; }
 
     FILES=".obsidian/workspace
     .obsidian/workspace.json
@@ -132,11 +132,11 @@ function remove_files_from_git()
 
     for file in $FILES; do
         if [ -f "$file" ]; then
-            cd "$HOME_PATH/$folder_name" || { echo "Failure while changing directory into $HOME_PATH/$folder_name"; exit 1; }
+            cd "$OBSIDIAN_PATH/$folder_name" || { echo "Failure while changing directory into $OBSIDIAN_PATH/$folder_name"; exit 1; }
             git rm --cached "$file"
         fi
     done
-    cd "$HOME_PATH/$folder_name" || { echo "Failure while changing directory into $HOME_PATH/$folder_name"; exit 1; }
+    cd "$OBSIDIAN_PATH/$folder_name" || { echo "Failure while changing directory into $OBSIDIAN_PATH/$folder_name"; exit 1; }
     if git status | grep "new file" ; then
         git commit -am "Remove ignored files"
     fi
@@ -217,8 +217,8 @@ function optimize_repo_for_mobile()
     read -r choice
     folder="${folders[$choice-1]}"
     echo "You selected $folder"
-    if [ -d "$DOWNLOAD_FOLDER/$folder" ]; then
-        if git -C "$HOME_PATH/$folder" status &> /dev/null
+    if [ -d "$OBSIDIAN_PATH/$folder" ]; then
+        if git -C "$OBSIDIAN_PATH/$folder" status &> /dev/null
         then
             add_gitignore_entries "$folder"
             add_gitattributes_entry "$folder"
@@ -227,24 +227,24 @@ function optimize_repo_for_mobile()
             echo "The $folder folder is not a Git repository"
         fi
     else
-        echo "Folder $DOWNLOAD_FOLDER/$folder doesn't exist. You should clone the repo again."
+        echo "Folder $OBSIDIAN_PATH/$folder doesn't exist. You should clone the repo again."
     fi
 }
 function create_alias_and_git_scripts()
 {
-    touch "$HOME_PATH/.bashrc"
-    touch "$HOME_PATH/.obsidian"
-    chmod +x "$HOME_PATH/.obsidian"
-    touch "$HOME_PATH/.profile"
+    touch "$SCRIPTS_TERMUX_PATH/.bashrc"
+    touch "$SCRIPTS_TERMUX_PATH/.obsidian"
+    chmod +x "$SCRIPTS_TERMUX_PATH/.obsidian"
+    touch "$SCRIPTS_TERMUX_PATH/.profile"
     # append this to file only if it is not already there
-    write_to_file_if_not_exists "$OBSIDIAN_SCRIPT" "$HOME_PATH/.obsidian"
-    write_to_file_if_not_exists "source $HOME_PATH/.obsidian" "$HOME_PATH/.profile"
-    write_to_file_if_not_exists "source $HOME_PATH/.profile" "$HOME_PATH/.bashrc"
+    write_to_file_if_not_exists "$OBSIDIAN_SCRIPT" "$SCRIPTS_TERMUX_PATH/.obsidian"
+    write_to_file_if_not_exists "source $SCRIPTS_TERMUX_PATH/.obsidian" "$SCRIPTS_TERMUX_PATH/.profile"
+    write_to_file_if_not_exists "source $SCRIPTS_TERMUX_PATH/.profile" "$SCRIPTS_TERMUX_PATH/.bashrc"
 
 
     folders=()
     i=1
-    for dir in "$HOME_PATH"/*; do
+    for dir in "$OBSIDIAN_PATH"/*; do
         if [ -d "$dir" ]; then
             if git -C "$dir" status &> /dev/null
             then
@@ -262,9 +262,9 @@ function create_alias_and_git_scripts()
     echo "You selected $folder"
     echo "What do you want your alias to be?"
     read -r alias
-    echo "alias $alias='sync_obsidian $HOME_PATH/$folder'" > "$HOME_PATH/.$folder"
-    write_to_file_if_not_exists "source $HOME_PATH/.$folder"  "$HOME_PATH/.profile"
-    echo "alias $alias created in .$folder"
+    echo "alias $alias='sync_obsidian $SCRIPTS_TERMUX_PATH/$folder'" > "$SCRIPTS_TERMUX_PATH/.$folder"
+    write_to_file_if_not_exists "source $SCRIPTS_TERMUX_PATH/.$folder"  "$SCRIPTS_TERMUX_PATH/.profile"
+    echo "alias $alias created in $SCRIPTS_TERMUX_PATH/.$folder"
     echo "You should exit the program for changes to take effect."
 }
 
@@ -282,6 +282,16 @@ function sync_obsidian()
     git commit -m "automerge android"
     git push
     echo "Sync is finished"
+    
+    # Delete Index.lock
+    if [ -e $OBSIDIAN_PATH/.git/index.lock" ]; then
+        echo "Deleting file Index.lock."
+        echo "Path: $dir"
+        rm $dir
+    else
+
+    fi
+
     sleep 2
 }
 '
