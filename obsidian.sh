@@ -1,21 +1,19 @@
-#!/bin/bash
+#!/data/data/com.termux/files/usr/bin/bash
 echo "Script Version 0.4.1.5"
 echo "This script is used to facilitate configuration of git for obsidian using termux. "
 
 SCRIPTS_TERMUX_DIR=".shortcuts"
-SCRIPTS_DIR="obsidian-sync"
 OBSIDIAN_DIR="Obsidian"
 GIT_DIR="Github"
-
 
 export HOME_PATH="/data/data/com.termux/files/home"
 export STORAGE_PATH="/storage/emulated/0"
 export REPOS_PATH="$STORAGE_PATH/Repos"
-export SCRIPTS_REPO_PATH="$REPOS_PATH/$GIT_DIR/$SCRIPTS_DIR"
-export SCRIPTS_TERMUX_PATH="$HOME_PATH/$SCRIPTS_TERMUX_DIR/$SCRIPTS_DIR"
 export OBSIDIAN_PATH="$REPOS_PATH/$OBSIDIAN_DIR"
-#export DOWNLOAD_FOLDER="$REPOS_PATH/$OBSIDIAN_DIR"
 export GIT_PATH="$REPOS_PATH/$GIT_DIR"
+export SCRIPTS_TERMUX_PATH="$STORAGE_PATH/$SCRIPTS_TERMUX_DIR"
+
+
 #export NOTIFICATION_PATH="$STORAGE_PATH/sync-error-notification"
 #export LAST_MOBILE_SYNC_PATH="$HOME/last_sync.log"
 
@@ -70,16 +68,19 @@ function generate_ssh_key() {
 function clone_repo() {
     folder="$1"
     git_url="$2"
-    echo "Git Folder: $GIT_PATH/$folder"
+    echo "Git Folder: $GIT_PATH/"
     echo "Obsidian Folder: $OBSIDIAN_PATH/$folder"
     echo "Git Url: $git_url"
+    
 
+    write_to_path_if_not_exists "$OBSIDIAN_PATH"
+    
     cd "$OBSIDIAN_PATH/" || { echo "Failure while changing directory into $OBSIDIAN_PATH"; exit 1; }
-    mkdir -p "$OBSIDIAN_PATH/$folder"
+    #mkdir -p "$OBSIDIAN_PATH/$folder"
 
     git --git-dir "$OBSIDIAN_PATH/$folder" --work-tree "$OBSIDIAN_PATH/$folder" clone "$git_url"
     cd "$OBSIDIAN_PATH/$folder" || { echo "Failure while changing directory into $OBSIDIAN_PATH/$folder"; exit 1; }
-    git worktree add --checkout "$OBSIDIAN_PATH/$folder" --force
+    #git worktree add --checkout "$OBSIDIAN_PATH/$folder" --force
 }
 
 # add gitignore file
@@ -143,6 +144,18 @@ function remove_files_from_git()
 
 }
 
+function write_to_path_if_not_exists()
+{
+    path="$1"
+    if [ -e "$path" ];then
+	    echo " Dir: $path, já existe!";
+    else
+	    echo " Dir: ${path}, não existe, e será criado.";
+	    mkdir -p ${path};
+	    [ -e "${path}" ] && echo " Dir: $path, criada com sucesso."
+    fi 
+}
+
 function write_to_file_if_not_exists()
 {
     content="$1"
@@ -201,7 +214,7 @@ function optimize_repo_for_mobile()
 {
     folders=()
     i=1
-    for dir in "$HOME_PATH"/*; do
+    for dir in "$OBSIDIAN_PATH"/*; do
         if [ -d "$dir" ]; then
             if git -C "$dir" status &> /dev/null
             then
@@ -232,16 +245,6 @@ function optimize_repo_for_mobile()
 }
 function create_alias_and_git_scripts()
 {
-    touch "$SCRIPTS_TERMUX_PATH/.bashrc"
-    touch "$SCRIPTS_TERMUX_PATH/.obsidian"
-    chmod +x "$SCRIPTS_TERMUX_PATH/.obsidian"
-    touch "$SCRIPTS_TERMUX_PATH/.profile"
-    # append this to file only if it is not already there
-    write_to_file_if_not_exists "$OBSIDIAN_SCRIPT" "$SCRIPTS_TERMUX_PATH/.obsidian"
-    write_to_file_if_not_exists "source $SCRIPTS_TERMUX_PATH/.obsidian" "$SCRIPTS_TERMUX_PATH/.profile"
-    write_to_file_if_not_exists "source $SCRIPTS_TERMUX_PATH/.profile" "$SCRIPTS_TERMUX_PATH/.bashrc"
-
-
     folders=()
     i=1
     for dir in "$OBSIDIAN_PATH"/*; do
@@ -260,6 +263,18 @@ function create_alias_and_git_scripts()
     read -r choice
     folder="${folders[$choice-1]}"
     echo "You selected $folder"
+    
+    write_to_path_if_not_exists "$SCRIPTS_TERMUX_PATH/$folder/"
+
+    touch "$SCRIPTS_TERMUX_PATH/$folder/.bashrc"
+    touch "$SCRIPTS_TERMUX_PATH/$folder/.obsidian"
+    chmod +x "$SCRIPTS_TERMUX_PATH/$folder/.obsidian"
+    touch "$SCRIPTS_TERMUX_PATH/$folder/.profile"
+    # append this to file only if it is not already there
+    write_to_file_if_not_exists "$OBSIDIAN_SCRIPT" "$SCRIPTS_TERMUX_PATH/$folder/.obsidian"
+    write_to_file_if_not_exists "source $SCRIPTS_TERMUX_PATH/$folder/.obsidian" "$SCRIPTS_TERMUX_PATH/$folder/.profile"
+    write_to_file_if_not_exists "source $SCRIPTS_TERMUX_PATH/$folder/.profile" "$SCRIPTS_TERMUX_PATH/$folder/.bashrc"
+
     echo "What do you want your alias to be?"
     read -r alias
     echo "alias $alias='sync_obsidian $SCRIPTS_TERMUX_PATH/$folder'" > "$SCRIPTS_TERMUX_PATH/.$folder"
@@ -281,15 +296,13 @@ function sync_obsidian()
     git add .
     git commit -m "automerge android"
     git push
-    echo "Sync is finished"
-    
+        
     # Delete Index.lock
-    if [ -e $OBSIDIAN_PATH/.git/index.lock" ]; then
-        echo "Deleting file Index.lock."
-        echo "Path: $dir"
-        rm $dir
+    if [ -e .git/index.lock" ]; then
+        echo "Obsidian repo busy - index.lock - wait next sync"
+	rm -f .git/index.lock
     else
-
+        echo "Sync is finished"
     fi
 
     sleep 2
