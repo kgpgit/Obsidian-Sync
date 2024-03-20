@@ -68,19 +68,18 @@ function generate_ssh_key() {
 function clone_repo() {
     folder="$1"
     git_url="$2"
-    echo "Git Folder: $GIT_PATH/"
+    echo "Git Folder: $GIT_PATH/$folder"
     echo "Obsidian Folder: $OBSIDIAN_PATH/$folder"
     echo "Git Url: $git_url"
+    write_to_path_if_not_exists "$OBSIDIAN_PATH/$folder"
+    write_to_path_if_not_exists "$GIT_PATH/$folder"
     
+    cd "$GIT_PATH/" || { echo "Failure while changing directory into $GIT_PATH"; exit 1; }
+    #mkdir -p "$GIT_PATH/$folder"
 
-    write_to_path_if_not_exists "$OBSIDIAN_PATH"
-    
-    cd "$OBSIDIAN_PATH/" || { echo "Failure while changing directory into $OBSIDIAN_PATH"; exit 1; }
-    #mkdir -p "$OBSIDIAN_PATH/$folder"
-
-    git --git-dir "$OBSIDIAN_PATH/$folder" --work-tree "$OBSIDIAN_PATH/$folder" clone "$git_url"
-    cd "$OBSIDIAN_PATH/$folder" || { echo "Failure while changing directory into $OBSIDIAN_PATH/$folder"; exit 1; }
-    #git worktree add --checkout "$OBSIDIAN_PATH/$folder" --force
+    git --git-dir "$GIT_PATH/$folder" --work-tree "$OBSIDIAN_PATH/$folder" clone "$git_url"
+    cd "$GIT_PATH/$folder" || { echo "Failure while changing directory into $GIT_PATH/$folder"; exit 1; }
+    git worktree add --checkout "$OBSIDIAN_PATH/$folder" --force
 }
 
 # add gitignore file
