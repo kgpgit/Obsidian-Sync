@@ -264,30 +264,28 @@ function create_alias_and_git_scripts()
     folder="${folders[$choice-1]}"
     echo "You selected $folder"
     
-    write_to_path_if_not_exists "$SCRIPTS_TERMUX_PATH/$folder/"
+   # write_to_path_if_not_exists "$HOME_PATH/$folder/"
 
-    touch "$SCRIPTS_TERMUX_PATH/$folder/.bashrc"
-    touch "$SCRIPTS_TERMUX_PATH/$folder/.obsidian"
-    chmod +x "$SCRIPTS_TERMUX_PATH/$folder/.obsidian"
-    touch "$SCRIPTS_TERMUX_PATH/$folder/.profile"
+    #touch "$HOME_PATH/.bashrc"
+    touch "$OBSIDIAN_PATH/$folder/.sync_obsidian"
+    chmod +x "$OBSIDIAN_PATH/$folder/.sync_obsidian"
+    #touch "$HOME_PATH/.profile"
     # append this to file only if it is not already there
-    write_to_file_if_not_exists "$OBSIDIAN_SCRIPT" "$SCRIPTS_TERMUX_PATH/$folder/.obsidian"
-    write_to_file_if_not_exists "source $SCRIPTS_TERMUX_PATH/$folder/.obsidian" "$SCRIPTS_TERMUX_PATH/$folder/.profile"
-    write_to_file_if_not_exists "source $SCRIPTS_TERMUX_PATH/$folder/.profile" "$SCRIPTS_TERMUX_PATH/$folder/.bashrc"
+    write_to_file_if_not_exists "$OBSIDIAN_SCRIPT" "$OBSIDIAN_PATH/$folder/.sync_obsidian"
+    write_to_file_if_not_exists "source $OBSIDIAN_PATH/$folder/.sync_obsidian" "$HOME_PATH/.profile"
+    #write_to_file_if_not_exists "source $HOME_PATH/.profile" "$HOME_PATH/.bashrc"
 
     echo "What do you want your alias to be?"
     read -r alias
-    echo "alias $alias='sync_obsidian $SCRIPTS_TERMUX_PATH/$folder'" > "$SCRIPTS_TERMUX_PATH/.$folder"
-    write_to_file_if_not_exists "source $SCRIPTS_TERMUX_PATH/.$folder"  "$SCRIPTS_TERMUX_PATH/.profile"
-    echo "alias $alias created in $SCRIPTS_TERMUX_PATH/.$folder"
+    echo "alias $alias='sync_obsidian $OBSIDIAN_PATH/$folder'" > "$OBSIDIAN_PATH/$folder/.$folder"
+    write_to_file_if_not_exists "source $OBSIDIAN_PATH/$folder/.$folder"  "$HOME_PATH/.profile"
+    echo "alias $alias created in .$folder"
     echo "You should exit the program for changes to take effect."
 }
 
 # shellcheck disable=SC2016
-
-OBSIDIAN_SCRIPT='
-function sync_obsidian()
-{
+BASH_SCRIPT='
+    echo "repo git path: $1"
     cd "$1" || { echo "Failure while changing directory into $1"; exit 1; }
     git add .
     git commit -m "Android Commit"
@@ -296,16 +294,39 @@ function sync_obsidian()
     git add .
     git commit -m "automerge android"
     git push
-        
+
     # Delete Index.lock
-    if [ -e .git/index.lock" ]; then
+    if [ -e ".git/index.lock" ]; then
         echo "Obsidian repo busy - index.lock - wait next sync"
-	rm -f .git/index.lock
+        rm -f ".git/index.lock"
     else
         echo "Sync is finished"
     fi
-
     sleep 2
+'
+
+OBSIDIAN_SCRIPT='
+function sync_obsidian()
+{
+    echo "repo git path: $1"
+    cd "$1" || { echo "Failure while changing directory into $1"; exit 1; }
+    git add .
+    git commit -m "Android Commit"
+    git fetch
+    git merge --no-edit
+    git add .
+    git commit -m "automerge android"
+    git push
+
+    # Delete Index.lock
+    if [ -e ".git/index.lock" ]; then
+        echo "Obsidian repo busy - index.lock - wait next sync"
+        rm -f ".git/index.lock"
+    else
+        echo "Sync is finished"
+    fi
+    sleep 2
+
 }
 '
 
