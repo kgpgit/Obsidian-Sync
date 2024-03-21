@@ -71,12 +71,11 @@ function clone_repo() {
     echo "Git Folder: $GIT_PATH/$folder"
     echo "Obsidian Folder: $OBSIDIAN_PATH/$folder"
     echo "Git Url: $git_url"
-    write_to_path_if_not_exists "$OBSIDIAN_PATH/$folder"
-    write_to_path_if_not_exists "$GIT_PATH/$folder"
+    write_to_path_if_not_exists "$OBSIDIAN_PATH"
+    write_to_path_if_not_exists "$GIT_PATH"
     
     cd "$GIT_PATH/" || { echo "Failure while changing directory into $GIT_PATH"; exit 1; }
-    #mkdir -p "$GIT_PATH/$folder"
-
+    mkdir -p "$GIT_PATH/$folder"
     git --git-dir "$GIT_PATH/$folder" --work-tree "$OBSIDIAN_PATH/$folder" clone "$git_url"
     cd "$GIT_PATH/$folder" || { echo "Failure while changing directory into $GIT_PATH/$folder"; exit 1; }
     git worktree add --checkout "$OBSIDIAN_PATH/$folder" --force
@@ -147,11 +146,11 @@ function write_to_path_if_not_exists()
 {
     path="$1"
     if [ -e "$path" ];then
-	    echo " Dir: $path, já existe!";
+	    echo " Checking path: $path, checked!";
     else
-	    echo " Dir: ${path}, não existe, e será criado.";
+	    echo " Creating path: ${path}! ";
 	    mkdir -p ${path};
-	    [ -e "${path}" ] && echo " Dir: $path, criada com sucesso."
+	    [ -e "${path}" ] && echo "  $path, created success!"
     fi 
 }
 
