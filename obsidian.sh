@@ -76,6 +76,7 @@ function clone_repo() {
     
     cd "$GIT_PATH/" || { echo "Failure while changing directory into $GIT_PATH"; exit 1; }
     mkdir -p "$GIT_PATH/$folder"
+
     git --git-dir "$GIT_PATH/$folder" --work-tree "$OBSIDIAN_PATH/$folder" clone "$git_url"
     cd "$GIT_PATH/$folder" || { echo "Failure while changing directory into $GIT_PATH/$folder"; exit 1; }
     git worktree add --checkout "$OBSIDIAN_PATH/$folder" --force
@@ -131,11 +132,11 @@ function remove_files_from_git()
 
     for file in $FILES; do
         if [ -f "$file" ]; then
-            cd "$OBSIDIAN_PATH/$folder_name" || { echo "Failure while changing directory into $OBSIDIAN_PATH/$folder_name"; exit 1; }
+            cd "$GIT_PATH/$folder_name" || { echo "Failure while changing directory into $OBSIDIAN_PATH/$folder_name"; exit 1; }
             git rm --cached "$file"
         fi
     done
-    cd "$OBSIDIAN_PATH/$folder_name" || { echo "Failure while changing directory into $OBSIDIAN_PATH/$folder_name"; exit 1; }
+    cd "$GIT_PATH/$folder_name" || { echo "Failure while changing directory into $OBSIDIAN_PATH/$folder_name"; exit 1; }
     if git status | grep "new file" ; then
         git commit -am "Remove ignored files"
     fi
@@ -192,6 +193,7 @@ function configure_git_and_ssh_keys()
     configure_git "$name" "$email"
     generate_ssh_key "$email"
 }
+
 function clone_obsidian_repo()
 {
     while true; do
@@ -208,6 +210,7 @@ function clone_obsidian_repo()
     folder_name=${base_name%.*}
     clone_repo "$folder_name" "$git_url"
 }
+
 function optimize_repo_for_mobile()
 {
     folders=()
@@ -229,7 +232,7 @@ function optimize_repo_for_mobile()
     folder="${folders[$choice-1]}"
     echo "You selected $folder"
     if [ -d "$OBSIDIAN_PATH/$folder" ]; then
-        if git -C "$OBSIDIAN_PATH/$folder" status &> /dev/null
+        if git -C "$GIT_PATH/$folder" status &> /dev/null
         then
             add_gitignore_entries "$folder"
             add_gitattributes_entry "$folder"
@@ -241,6 +244,7 @@ function optimize_repo_for_mobile()
         echo "Folder $OBSIDIAN_PATH/$folder doesn't exist. You should clone the repo again."
     fi
 }
+
 function create_alias_and_git_scripts()
 {
     folders=()
@@ -261,32 +265,31 @@ function create_alias_and_git_scripts()
     read -r choice
     folder="${folders[$choice-1]}"
     echo "You selected $folder"
-    
-   # write_to_path_if_not_exists "$HOME_PATH/$folder/"
 
     #touch "$HOME_PATH/.bashrc"
-    touch "$OBSIDIAN_PATH/$folder/.sync_obsidian"
-    chmod +x "$OBSIDIAN_PATH/$folder/.sync_obsidian"
-    #touch "$HOME_PATH/.profile"
+    touch "$GIT_PATH/$folder/.sync_obsidian"
+    chmod +x "$GIT_PATH/$folder/.sync_obsidian"
+
     # append this to file only if it is not already there
-    write_to_file_if_not_exists "$OBSIDIAN_SCRIPT" "$OBSIDIAN_PATH/$folder/.sync_obsidian"
-    write_to_file_if_not_exists "source $OBSIDIAN_PATH/$folder/.sync_obsidian" "$HOME_PATH/.profile"
+    write_to_file_if_not_exists "$OBSIDIAN_SCRIPT" "$GIT_PATH/$folder/.sync_obsidian"
+    write_to_file_if_not_exists "source $GIT_PATH/$folder/.sync_obsidian" "$HOME_PATH/.profile"
     #write_to_file_if_not_exists "source $HOME_PATH/.profile" "$HOME_PATH/.bashrc"
 
     echo "What do you want your alias to be?"
     read -r alias
-    echo "alias $alias='sync_obsidian $OBSIDIAN_PATH/$folder'" > "$OBSIDIAN_PATH/$folder/.$folder"
-    write_to_file_if_not_exists "source $OBSIDIAN_PATH/$folder/.$folder"  "$HOME_PATH/.profile"
-    echo "alias $alias created in .$folder"
+    echo "alias $alias='sync_obsidian $GIT_PATH/$folder'" > "$GIT_PATH/$folder/.$folder"
+    write_to_file_if_not_exists "source $GIT_PATH/$folder/.$folder"  "$HOME_PATH/.profile"
+    echo "alias $alias created in $GIT_PATH/$folder/.$folder"
     echo "You should exit the program for changes to take effect."
 }
 
 # shellcheck disable=SC2016
-BASH_SCRIPT='
+BASH_SCRIPT=
+'
     echo "repo git path: $1"
     cd "$1" || { echo "Failure while changing directory into $1"; exit 1; }
     git add .
-    git commit -m "Android Commit"
+    git commit -m "Android Commit - `date +'%Y-%m-%d %H-%M-%S'`"
     git fetch
     git merge --no-edit
     git add .
@@ -295,7 +298,7 @@ BASH_SCRIPT='
 
     # Delete Index.lock
     if [ -e ".git/index.lock" ]; then
-        echo "Obsidian repo busy - index.lock - wait next sync"
+        echo "Obsidian repo busy - index.lock - trying later"
         rm -f ".git/index.lock"
     else
         echo "Sync is finished"
@@ -303,13 +306,14 @@ BASH_SCRIPT='
     sleep 2
 '
 
-OBSIDIAN_SCRIPT='
+OBSIDIAN_SCRIPT=
+'
 function sync_obsidian()
 {
     echo "repo git path: $1"
     cd "$1" || { echo "Failure while changing directory into $1"; exit 1; }
     git add .
-    git commit -m "Android Commit"
+    git commit -m "Android Commit - `date +'%Y-%m-%d %H-%M-%S'`"
     git fetch
     git merge --no-edit
     git add .
@@ -318,7 +322,7 @@ function sync_obsidian()
 
     # Delete Index.lock
     if [ -e ".git/index.lock" ]; then
-        echo "Obsidian repo busy - index.lock - wait next sync"
+        echo "Obsidian repo busy - index.lock - trying later"
         rm -f ".git/index.lock"
     else
         echo "Sync is finished"
@@ -327,7 +331,6 @@ function sync_obsidian()
 
 }
 '
-
 
 # Main menu loop
 while true; do
