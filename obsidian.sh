@@ -2,7 +2,7 @@
 clear
 
 echo "Script Version 0.4.1.5"
-echo "This script is used to facilitate configuration of git for obsidian using termux. "
+echo -e "This script is used to facilitate configuration of git for obsidian using termux.\n "
 
 SCRIPTS_TERMUX_DIR=".shortcuts"
 OBSIDIAN_DIR="Local"
@@ -279,26 +279,25 @@ function create_alias_and_git_scripts()
     read -r alias
     echo "alias $alias='sync_obsidian $GIT_PATH/$folder'" > "$GIT_PATH/$folder/.$folder"
     write_to_file_if_not_exists "source $GIT_PATH/$folder/.$folder"  "$HOME_PATH/.profile"
-    echo -e "alias $alias created in $GIT_PATH/$folder/.$folder"#\n
+    echo "alias $alias created in $GIT_PATH/$folder/.$folder"
 
     write_to_path_if_not_exists "$SCRIPTS_TERMUX_PATH"
     cd "$SCRIPTS_TERMUX_PATH/" || { echo "Failure while changing directory into $SCRIPTS_TERMUX_PATH"; exit 1; }
     touch "$SCRIPTS_TERMUX_PATH/$folder.sh"
-    echo "$TERMUX_SHELL_SCRIPTS" > "$SCRIPTS_TERMUX_PATH/$folder.sh" 
-
+    echo "$TERMUX_SHELL_SCRIPTS" > "$SCRIPTS_TERMUX_PATH/$folder.sh"
+    echo "-------------------------------------------------------"
     echo "You should exit the program for changes to take effect."
+    echo "-------------------------------------------------------"
 }
 
 # shellcheck disable=SC2016
 
-OBSIDIAN_SCRIPT=
-'
-function sync_obsidian()
+OBSIDIAN_SCRIPT='function sync_obsidian()
 {
     echo "Update repo git path: $1"
     cd "$1" || { echo "Failure while changing directory into $1"; exit 1; }
     git add .
-    git commit -m "Android Commit - `date +'%Y-%m-%d %H-%M-%S'`"
+    git commit -m "Android Commit -  "
     git fetch
     git merge --no-edit
     git add .
@@ -317,11 +316,11 @@ function sync_obsidian()
 }
 '
 
-TERMUX_SHELL_SCRIPTS=$(
-#!/data/data/com.termux/files/usr/bin/bash
-source "$GIT_PATH/$folder/.sync_obsidian"
-sync_obsidian "$GIT_PATH/$follder"
-)
+TERMUX_SHELL_SCRIPTS='#!/data/data/com.termux/files/usr/bin/bash
+
+source '$GIT_PATH/$folder.sync_obsidian'
+sync_obsidian '$GIT_PATH/$folder'
+'
 
 
 # Main menu loop
@@ -378,5 +377,5 @@ do
     esac
 done
 
-echo "-------------------------------------"
+echo "-----------------------------------------------------"
 done
