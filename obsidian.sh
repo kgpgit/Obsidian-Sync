@@ -1,10 +1,12 @@
 #!/data/data/com.termux/files/usr/bin/bash
+clear
+
 echo "Script Version 0.4.1.5"
 echo "This script is used to facilitate configuration of git for obsidian using termux. "
 
 SCRIPTS_TERMUX_DIR=".shortcuts"
-OBSIDIAN_DIR="Obsidian"
-GIT_DIR="Github"
+OBSIDIAN_DIR="Local"
+GIT_DIR="Remote"
 
 export HOME_PATH="/data/data/com.termux/files/home"
 export STORAGE_PATH="/storage/emulated/0"
@@ -13,10 +15,8 @@ export OBSIDIAN_PATH="$REPOS_PATH/$OBSIDIAN_DIR"
 export GIT_PATH="$REPOS_PATH/$GIT_DIR"
 export SCRIPTS_TERMUX_PATH="$STORAGE_PATH/$SCRIPTS_TERMUX_DIR"
 
-
 #export NOTIFICATION_PATH="$STORAGE_PATH/sync-error-notification"
 #export LAST_MOBILE_SYNC_PATH="$HOME/last_sync.log"
-
 
 # Define functions for each menu option
 function install_required_deps()
@@ -73,7 +73,7 @@ function clone_repo() {
     echo "Git Url: $git_url"
     write_to_path_if_not_exists "$OBSIDIAN_PATH"
     write_to_path_if_not_exists "$GIT_PATH"
-    
+
     cd "$GIT_PATH/" || { echo "Failure while changing directory into $GIT_PATH"; exit 1; }
     mkdir -p "$GIT_PATH/$folder"
 
@@ -266,51 +266,36 @@ function create_alias_and_git_scripts()
     folder="${folders[$choice-1]}"
     echo "You selected $folder"
 
-    #touch "$HOME_PATH/.bashrc"
+    touch "$HOME_PATH/.bashrc"
     touch "$GIT_PATH/$folder/.sync_obsidian"
     chmod +x "$GIT_PATH/$folder/.sync_obsidian"
 
     # append this to file only if it is not already there
     write_to_file_if_not_exists "$OBSIDIAN_SCRIPT" "$GIT_PATH/$folder/.sync_obsidian"
     write_to_file_if_not_exists "source $GIT_PATH/$folder/.sync_obsidian" "$HOME_PATH/.profile"
-    #write_to_file_if_not_exists "source $HOME_PATH/.profile" "$HOME_PATH/.bashrc"
+    write_to_file_if_not_exists "source $HOME_PATH/.profile" "$HOME_PATH/.bashrc"
 
     echo "What do you want your alias to be?"
     read -r alias
     echo "alias $alias='sync_obsidian $GIT_PATH/$folder'" > "$GIT_PATH/$folder/.$folder"
     write_to_file_if_not_exists "source $GIT_PATH/$folder/.$folder"  "$HOME_PATH/.profile"
-    echo "alias $alias created in $GIT_PATH/$folder/.$folder"
+    echo -e "alias $alias created in $GIT_PATH/$folder/.$folder"#\n
+
+    write_to_path_if_not_exists "$SCRIPTS_TERMUX_PATH"
+    cd "$SCRIPTS_TERMUX_PATH/" || { echo "Failure while changing directory into $SCRIPTS_TERMUX_PATH"; exit 1; }
+    touch "$SCRIPTS_TERMUX_PATH/$folder.sh"
+    echo "$TERMUX_SHELL_SCRIPTS" > "$SCRIPTS_TERMUX_PATH/$folder.sh" 
+
     echo "You should exit the program for changes to take effect."
 }
 
 # shellcheck disable=SC2016
-BASH_SCRIPT=
-'
-    echo "repo git path: $1"
-    cd "$1" || { echo "Failure while changing directory into $1"; exit 1; }
-    git add .
-    git commit -m "Android Commit - `date +'%Y-%m-%d %H-%M-%S'`"
-    git fetch
-    git merge --no-edit
-    git add .
-    git commit -m "automerge android"
-    git push
-
-    # Delete Index.lock
-    if [ -e ".git/index.lock" ]; then
-        echo "Obsidian repo busy - index.lock - trying later"
-        rm -f ".git/index.lock"
-    else
-        echo "Sync is finished"
-    fi
-    sleep 2
-'
 
 OBSIDIAN_SCRIPT=
 '
 function sync_obsidian()
 {
-    echo "repo git path: $1"
+    echo "Update repo git path: $1"
     cd "$1" || { echo "Failure while changing directory into $1"; exit 1; }
     git add .
     git commit -m "Android Commit - `date +'%Y-%m-%d %H-%M-%S'`"
@@ -331,6 +316,13 @@ function sync_obsidian()
 
 }
 '
+
+TERMUX_SHELL_SCRIPTS=$(
+#!/data/data/com.termux/files/usr/bin/bash
+source "$GIT_PATH/$folder/.sync_obsidian"
+sync_obsidian "$GIT_PATH/$follder"
+)
+
 
 # Main menu loop
 while true; do
