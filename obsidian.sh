@@ -2,15 +2,17 @@
 clear
 
 echo "Script Version 0.4.1.5"
-echo -e "This script is used to facilitate configuration of git for obsidian using termux.\n "
+echo "This script is used to facilitate configuration of git for obsidian using termux. "
+echo -e "android path created: Obsidian/Local\n"
 
 SCRIPTS_TERMUX_DIR=".shortcuts"
 OBSIDIAN_DIR="Local"
 GIT_DIR="Remote"
+ANDROID_DIR="Obsidian"
 
 export HOME_PATH="/data/data/com.termux/files/home"
 export STORAGE_PATH="/storage/emulated/0"
-export REPOS_PATH="$STORAGE_PATH/Repos"
+export REPOS_PATH="$STORAGE_PATH/$ANDROID_DIR"
 export OBSIDIAN_PATH="$REPOS_PATH/$OBSIDIAN_DIR"
 export GIT_PATH="$REPOS_PATH/$GIT_DIR"
 export SCRIPTS_TERMUX_PATH="$STORAGE_PATH/$SCRIPTS_TERMUX_DIR"
@@ -25,6 +27,11 @@ function install_required_deps()
     apt upgrade -y
     pkg install openssh -y
     pkg install git -y
+    pkg install cronie termux-services -y
+    echo
+    echo "-------------------------------------------------------"
+    echo "You should reboot the termux for changes to take effect."
+    echo "-------------------------------------------------------"
 }
 
 function access_storage()
@@ -68,18 +75,31 @@ function generate_ssh_key() {
 function clone_repo() {
     folder="$1"
     git_url="$2"
+    git ls-remote "$git_url" -q
+    ck=git ls-remote "$git_url" -q
+    if [ck == 0]; then
+        echo "Repository git: $git_url doesn't exist!!!"
+        exit 1
+    fi
     echo "Git Folder: $GIT_PATH/$folder"
     echo "Obsidian Folder: $OBSIDIAN_PATH/$folder"
-    echo "Git Url: $git_url"
+    echo -e "Git Url: $git_url\n"
     write_to_path_if_not_exists "$OBSIDIAN_PATH"
     write_to_path_if_not_exists "$GIT_PATH"
+    echo
 
     cd "$GIT_PATH/" || { echo "Failure while changing directory into $GIT_PATH"; exit 1; }
-    mkdir -p "$GIT_PATH/$folder"
+    if [ -e "$GIT_PATH/$folder" ];then
+            echo -e "Repository $folder already exist: $ANDROID_DIR/$GIT_DIR/$folder\n";
+    else
+            #echo " Creating path: ${path}! ";
+            mkdir -p "$GIT_PATH/$folder"
+            #[ -e "${path}" ] && echo "  $path, created success!"
+    fi 
 
     git --git-dir "$GIT_PATH/$folder" --work-tree "$OBSIDIAN_PATH/$folder" clone "$git_url"
     cd "$GIT_PATH/$folder" || { echo "Failure while changing directory into $GIT_PATH/$folder"; exit 1; }
-    git worktree add --checkout "$OBSIDIAN_PATH/$folder" --force
+    #git worktree add --checkout "$OBSIDIAN_PATH/$folder" --force
 }
 
 # add gitignore file
@@ -223,7 +243,13 @@ function optimize_repo_for_mobile()
                 folders+=("$folder_name")
                 echo "$i) $folder_name"
                 ((i++))
+            else
+                echo "The $folder folder is not a Git repository"
+                exit 0
             fi
+        else
+            echo -e "repository doesn't exist. You should clone the repo again.\n"
+            exit 0
         fi
     done
     echo "Now which repository do you want to optimize?"
@@ -257,7 +283,13 @@ function create_alias_and_git_scripts()
                 folders+=("$folder_name")
                 echo "$i) $folder_name"
                 ((i++))
+            else
+                echo "The $folder folder is not a Git repository"
+                exit 0
             fi
+        else
+            echo -e "repository doesn't exist. You should clone the repo again.\n"
+            exit 0
         fi
     done
     echo "Now which repository do you want to create scripts for?"
@@ -275,20 +307,50 @@ function create_alias_and_git_scripts()
     write_to_file_if_not_exists "source $GIT_PATH/$folder/.sync_obsidian" "$HOME_PATH/.profile"
     write_to_file_if_not_exists "source $HOME_PATH/.profile" "$HOME_PATH/.bashrc"
 
+    # alias
     echo "What do you want your alias to be?"
     read -r alias
     echo "alias $alias='sync_obsidian $GIT_PATH/$folder'" > "$GIT_PATH/$folder/.$folder"
     write_to_file_if_not_exists "source $GIT_PATH/$folder/.$folder"  "$HOME_PATH/.profile"
     echo "alias $alias created in $GIT_PATH/$folder/.$folder"
 
+    # termux manual script
     write_to_path_if_not_exists "$SCRIPTS_TERMUX_PATH"
     cd "$SCRIPTS_TERMUX_PATH/" || { echo "Failure while changing directory into $SCRIPTS_TERMUX_PATH"; exit 1; }
     touch "$SCRIPTS_TERMUX_PATH/$folder.sh"
     echo "$TERMUX_SHELL_SCRIPTS" > "$SCRIPTS_TERMUX_PATH/$folder.sh"
+
+    # termux automatic script
+    echo "How often is automatic sync supposed to occur??"
+    echo "time in minutes: 1 to 59"
+    read -r often
+    echo "$often"
+
+    # start service crontab
+    sv-enable crond 
+    cronjob_editor '*/10 * * * *' "bash '$SCRIPTS_TERMUX_PATH/$folder.sh'" add
+
     echo "-------------------------------------------------------"
     echo "You should exit the program for changes to take effect."
     echo "-------------------------------------------------------"
 }
+
+function cronjob_editor () {
+# usage: cronjob_editor '<interval>' '<command>' <add|remove>
+
+if [[ -z "$1" ]] ;then printf " no interval specified\n" ;fi
+if [[ -z "$2" ]] ;then printf " no command specified\n" ;fi
+if [[ -z "$3" ]] ;then printf " no action specified\n" ;fi
+
+if [[ "$3" == add ]] ;then
+    # add cronjob, no duplication:
+    ( crontab -l | grep -v -F -w "$2" ; echo "$1 $2" ) | crontab -
+elif [[ "$3" == remove ]] ;then
+    # remove cronjob:
+    ( crontab -l | grep -v -F -w "$2" ) | crontab -
+fi 
+} 
+
 
 # shellcheck disable=SC2016
 
@@ -316,13 +378,11 @@ OBSIDIAN_SCRIPT='function sync_obsidian()
 }
 '
 
-TERMUX_SHELL_SCRIPTS='#!/data/data/com.termux/files/usr/bin/bash
-
+TERMUX_SHELL_SCRIPTS='
+#!/data/data/com.termux/files/usr/bin/bash
 source '$GIT_PATH/$folder.sync_obsidian'
 sync_obsidian '$GIT_PATH/$folder'
 '
-
-
 # Main menu loop
 while true; do
 PS3='Please enter your choice: '
@@ -341,32 +401,32 @@ select opt in "${options[@]}"
 do
     case $opt in
         "${options[0]}")
-            echo "Installing Required packages"
+            echo -e "Installing Required packages\n"
             install_required_deps
             break
             ;;
         "${options[1]}")
-            echo "Getting Access for Storage"
+            echo -e "Getting Access for Storage\n"
             termux-setup-storage
             break
             ;;
         "${options[2]}")
-            echo "Configuring Git and SSH Key"
+            echo -e "Configuring Git and SSH Key\n"
             configure_git_and_ssh_keys
             break
             ;;
         "${options[3]}")
-            echo "Cloning Obsidian Git Repo"
+            echo -e "Cloning Obsidian Git Repo\n"
             clone_obsidian_repo
             break
             ;;
         "${options[4]}")
-            echo "Optimize repository for obsidian mobile"
+            echo -e "Optimize repository for obsidian mobile\n"
             optimize_repo_for_mobile
             break
             ;;
         "${options[5]}")
-            echo "Creating Alias and git commit scripts"
+            echo -e "Creating Alias and git commit scripts\n"
             create_alias_and_git_scripts
             break
             ;;
@@ -377,5 +437,5 @@ do
     esac
 done
 
-echo "-----------------------------------------------------"
+echo "-------------------------------------------------------"
 done
