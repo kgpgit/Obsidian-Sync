@@ -3,7 +3,7 @@ clear
 
 echo "Script Version 0.4.1.5"
 echo "This script is used to facilitate configuration of git for obsidian using termux. "
-echo -e "android path created: Obsidian/Local\n"
+echo -e "Obsidian Android path: Obsidian/Local/your_obsidian\n"
 
 SCRIPTS_TERMUX_DIR=".shortcuts"
 OBSIDIAN_DIR="Local"
@@ -75,31 +75,35 @@ function generate_ssh_key() {
 function clone_repo() {
     folder="$1"
     git_url="$2"
-    git ls-remote "$git_url" -q
-    ck=git ls-remote "$git_url" -q
-    if [ck == 0]; then
-        echo "Repository git: $git_url doesn't exist!!!"
-        exit 1
-    fi
-    echo "Git Folder: $GIT_PATH/$folder"
-    echo "Obsidian Folder: $OBSIDIAN_PATH/$folder"
-    echo -e "Git Url: $git_url\n"
-    write_to_path_if_not_exists "$OBSIDIAN_PATH"
-    write_to_path_if_not_exists "$GIT_PATH"
-    echo
 
-    cd "$GIT_PATH/" || { echo "Failure while changing directory into $GIT_PATH"; exit 1; }
-    if [ -e "$GIT_PATH/$folder" ];then
+    # check if remote repository exists
+    if git ls-remote -h "$git_url" &> /dev/null; then
+        echo "Git Folder: $GIT_PATH/$folder"
+        echo "Obsidian Folder: $OBSIDIAN_PATH/$folder"
+        echo -e "Git Url: $git_url\n"
+        write_to_path_if_not_exists "$OBSIDIAN_PATH"
+        write_to_path_if_not_exists "$GIT_PATH"
+        echo
+
+        cd "$GIT_PATH/" || { echo "Failure while changing directory into $GIT_PATH"; exit 1; }
+        if [ -e "$GIT_PATH/$folder" ];then
             echo -e "Repository $folder already exist: $ANDROID_DIR/$GIT_DIR/$folder\n";
-    else
+        else
             #echo " Creating path: ${path}! ";
             mkdir -p "$GIT_PATH/$folder"
             #[ -e "${path}" ] && echo "  $path, created success!"
-    fi 
+        fi 
 
-    git --git-dir "$GIT_PATH/$folder" --work-tree "$OBSIDIAN_PATH/$folder" clone "$git_url"
-    cd "$GIT_PATH/$folder" || { echo "Failure while changing directory into $GIT_PATH/$folder"; exit 1; }
-    #git worktree add --checkout "$OBSIDIAN_PATH/$folder" --force
+        git --git-dir "$GIT_PATH/$folder" --work-tree "$OBSIDIAN_PATH/$folder" clone "$git_url"
+        cd "$GIT_PATH/$folder" || { echo "Failure while changing directory into $GIT_PATH/$folder"; exit 1; }
+        git worktree add --checkout "$OBSIDIAN_PATH/$folder" --force
+
+    else
+        echo -e "Repository git: $git_url doesn't exist!!!\n"
+        sleep 5
+        #bash "$PWD/obsidian.sh"
+        #exit 1
+    fi
 }
 
 # add gitignore file
@@ -284,7 +288,7 @@ function create_alias_and_git_scripts()
                 echo "$i) $folder_name"
                 ((i++))
             else
-                echo "The $folder folder is not a Git repository"
+                echo "The $folder is not a Git repository"
                 exit 0
             fi
         else
@@ -296,39 +300,49 @@ function create_alias_and_git_scripts()
     echo "Select a folder:"
     read -r choice
     folder="${folders[$choice-1]}"
-    echo "You selected $folder"
+        if [ -d "$OBSIDIAN_PATH/$folder" ]; then
+            if git -C "$GIT_PATH/$folder" status &> /dev/null; then
+                echo "You selected $folder"
+            else
+                echo "The folder is not a remote Git repository"
+                exit 0
+            fi
+        else
+            echo -e "local repository doesn't exist. You should clone the repo again.\n"
+            exit 0
+        fi
 
-    touch "$HOME_PATH/.bashrc"
+    #touch "$HOME_PATH/.bashrc"
     touch "$GIT_PATH/$folder/.sync_obsidian"
     chmod +x "$GIT_PATH/$folder/.sync_obsidian"
 
     # append this to file only if it is not already there
     write_to_file_if_not_exists "$OBSIDIAN_SCRIPT" "$GIT_PATH/$folder/.sync_obsidian"
     write_to_file_if_not_exists "source $GIT_PATH/$folder/.sync_obsidian" "$HOME_PATH/.profile"
-    write_to_file_if_not_exists "source $HOME_PATH/.profile" "$HOME_PATH/.bashrc"
+    #write_to_file_if_not_exists "source $HOME_PATH/.profile" "$HOME_PATH/.bashrc"
 
     # alias
     echo "What do you want your alias to be?"
     read -r alias
     echo "alias $alias='sync_obsidian $GIT_PATH/$folder'" > "$GIT_PATH/$folder/.$folder"
+    echo "$HEADER_PROFILE" > "$HOME_PATH/.profile"
     write_to_file_if_not_exists "source $GIT_PATH/$folder/.$folder"  "$HOME_PATH/.profile"
     echo "alias $alias created in $GIT_PATH/$folder/.$folder"
 
-    # termux manual script
+    # termux manual script sync
     write_to_path_if_not_exists "$SCRIPTS_TERMUX_PATH"
     cd "$SCRIPTS_TERMUX_PATH/" || { echo "Failure while changing directory into $SCRIPTS_TERMUX_PATH"; exit 1; }
     touch "$SCRIPTS_TERMUX_PATH/$folder.sh"
     echo "$TERMUX_SHELL_SCRIPTS" > "$SCRIPTS_TERMUX_PATH/$folder.sh"
 
-    # termux automatic script
+    # termux automatic script sync
     echo "How often is automatic sync supposed to occur??"
     echo "time in minutes: 1 to 59"
-    read -r often
-    echo "$often"
+    read -r choice
 
     # start service crontab
-    sv-enable crond 
-    cronjob_editor '*/10 * * * *' "bash '$SCRIPTS_TERMUX_PATH/$folder.sh'" add
+    sv-enable crond
+    cronjob_editor "*/$choice * * * *" "bash '$SCRIPTS_TERMUX_PATH/$folder.sh'" add
 
     echo "-------------------------------------------------------"
     echo "You should exit the program for changes to take effect."
@@ -383,6 +397,13 @@ TERMUX_SHELL_SCRIPTS='
 source '$GIT_PATH/$folder.sync_obsidian'
 sync_obsidian '$GIT_PATH/$folder'
 '
+HEADER_PROFILE='
+    echo "-------------------------------------------------------"
+    echo "Reboot Automatics Scripts file: $PWD/.profile"
+    echo "-------------------------------------------------------"
+
+'
+
 # Main menu loop
 while true; do
 PS3='Please enter your choice: '
