@@ -346,6 +346,9 @@ function create_alias_and_git_scripts()
     # alias
     echo "What do you want your alias to be?"
     read -r alias
+    if [ -z $alias ];then
+        alias=$folder
+    fi
     echo "alias $alias='sync_obsidian $GIT_PATH/$folder'" > "$GIT_PATH/$folder/.$folder"
     echo "$PROFILE_SCRIPT">>"$HOME_PATH/.profile"
     echo "alias $alias created in $GIT_PATH/$folder/.$folder"
