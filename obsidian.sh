@@ -396,11 +396,11 @@ OBSIDIAN_SCRIPT='function sync_obsidian()
     echo "Update repo git path: $1"
     cd "$1" || { echo "Failure while changing directory into $1"; exit 1; }
     git add .
-    git commit -m "Android Commit -  "
+    git commit -m "Android Commit - $(date +%F) $(date +%T) "
     git fetch
     git merge --no-edit
     git add .
-    git commit -m "automerge android"
+    git commit -m "automerge android - $(date +%F) $(date +%T)"
     git push
 
     # Delete Index.lock
