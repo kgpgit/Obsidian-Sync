@@ -317,12 +317,15 @@ function create_alias_and_git_scripts()
             exit 0
         fi
 
+    # call scripts in repository folder from  termux .shortcuts
     TERMUX_SHELL_SCRIPT='#!/data/data/com.termux/files/usr/bin/bash
     source '$GIT_PATH/$folder/.sync_obsidian'
     sync_obsidian '$GIT_PATH/$folder'
     '
 
-    PROFILE_SCRIPT='#Created Automatically by Obsidian-Sync.git
+    # call scripts in repository folder
+    PROFILE_SCRIPT='# Created Automatically by Obsidian-Sync.git
+    "Repository: '$folder'"
     if [ -f '$GIT_PATH/$folder/.sync_obsidian' ];then
         source '$GIT_PATH/$folder/.sync_obsidian'
     fi
@@ -330,6 +333,7 @@ function create_alias_and_git_scripts()
         source '$GIT_PATH/$folder/.$folder'
     fi'
 
+    # create files in home/
     touch "$HOME_PATH/.bashrc"
     touch "$HOME_PATH/.profile"
     touch "$GIT_PATH/$folder/.sync_obsidian"
@@ -343,7 +347,7 @@ function create_alias_and_git_scripts()
     echo "What do you want your alias to be?"
     read -r alias
     echo "alias $alias='sync_obsidian $GIT_PATH/$folder'" > "$GIT_PATH/$folder/.$folder"
-    write_to_file_if_not_exists "$PROFILE_SCRIPT"  "$HOME_PATH/.profile"
+    echo "$PROFILE_SCRIPT">>"$HOME_PATH/.profile"
     echo "alias $alias created in $GIT_PATH/$folder/.$folder"
 
     # termux manual script sync
